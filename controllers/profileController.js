@@ -5,61 +5,47 @@ const bcrypt = require('bcrypt');
 
 // Función para actualizar el perfil del usuario, incluyendo la imagen
 const updateProfile = async (req, res) => {
-  const id_usuario = req.body.id_usuario;  // se obtiene el id
-  const profileImage = req.file;    // Aquí se está obteniendo la imagen del archivo subido
+  const { id_usuario, us_nombre, us_apellido, us_correo, telefono } = req.body;
+  const profileImage = req.file;  // Optional image upload
 
   console.log("Datos recibidos del frontend:", req.body);
 
-  // Valida si los parámetros esenciales existen
-  if (!id_usuario || !profileImage) {
-    console.error("Faltan parámetros necesarios: id_usuario o profileImage");
-    return res.status(400).json({ error: 'Faltan parámetros necesarios (id_usuario o profileImage)' });
+  // Validate essential parameters
+  if (!id_usuario) {
+    return res.status(400).json({ error: 'ID de usuario es requerido' });
   }
 
-  console.log("Parametros para la consulta SQL:", { id_usuario, profileImage });
+  // Validate name and email if provided
+  if (!us_nombre || !us_correo) {
+    return res.status(400).json({ error: 'Nombre y email son requeridos' });
+  }
 
   try {
-    // Aquí ejecutamos la consulta para actualizar el perfil
-    const result = await db.execute(
-      'UPDATE usuario SET us_foto = ? WHERE id_usuario = ?',
-      [profileImage.path, id_usuario]  // Usamos profileImage.path ya que es un objeto de archivo, no solo la imagen
-    );
+    let updateQuery = `
+      UPDATE usuario 
+      SET us_nombre = ?, 
+          us_apellido = ?, 
+          us_correo = ?, 
+          telefono = ?
+    `;
+    let queryParams = [us_nombre, us_apellido || null, us_correo, telefono || null];
+
+    // If an image is uploaded, include image update in the query
+    if (profileImage) {
+      updateQuery += ', us_foto = ?';
+      queryParams.push(profileImage.path);
+    }
+
+    updateQuery += ' WHERE id_usuario = ?';
+    queryParams.push(id_usuario);
+
+    const result = await db.execute(updateQuery, queryParams);
     console.log("Resultado de la consulta:", result);
 
     res.status(200).json({ message: 'Perfil actualizado correctamente' });
   } catch (error) {
     console.error("Error al actualizar perfil:", error);
     res.status(500).json({ error: 'Error interno del servidor', details: error.message });
-  }
-};
-
-const updateProfileInfo = async (req, res) => {
-  const { id_usuario, us_nombre, us_apellido, us_correo, telefono } = req.body;
-
-  // Valida si los parámetros esenciales existen
-  if (!id_usuario || !us_nombre || !us_apellido || !us_correo) {
-    return res.status(400).json({ error: 'Faltan parámetros necesarios' });
-  }
-
-  try {
-    // Ejecuta la consulta para actualizar los datos de perfil
-    const [result] = await db.promise().execute(
-      'UPDATE usuario SET us_nombre = ?, us_apellido = ?, us_correo = ? WHERE id_usuario = ?',
-      [us_nombre, us_apellido, us_correo, id_usuario]
-    );
-
-    // Si el usuario también es candidato, actualizamos el teléfono en la tabla de candidatos
-    if (telefono) {
-      await db.promise().execute(
-        'UPDATE candidatos SET telefono = ? WHERE id_usuario = ?',
-        [telefono, id_usuario]
-      );
-    }
-
-    res.status(200).json({ message: 'Perfil actualizado correctamente' });
-  } catch (error) {
-    console.error("Error al actualizar perfil:", error);
-    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
