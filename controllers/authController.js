@@ -66,6 +66,7 @@ const registerUser = async (req, res) => {
       );
 
       const userId = userResult.insertId;
+      console.log(userId);
 
       await connection.execute(
         'INSERT INTO candidatos (fechaNacimiento, telefono, id_usuario) VALUES (?, ?, ?)',
@@ -73,11 +74,12 @@ const registerUser = async (req, res) => {
       );
 
       const verificationToken = jwt.sign({ id_usuario: userId, role: USER_TYPES.CLIENT }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
+      console.log(verificationToken, "Verification code access ok")
       // Actualizar el campo 'us_codigo_verificacion' con el token de verificación
       await connection.execute('UPDATE usuario SET us_codigo_verificacion = ? WHERE id_usuario = ?', [verificationToken, userId]);
 
       await sendVerificationEmail(email, verificationToken);
+      console.log(sendVerificationEmail, "Servicio de send email verificatrion correcto")
 
       await connection.commit();
       res.status(201).json({ status: 'success', message: "Usuario registrado correctamente. Revisa tu correo para verificar tu cuenta." });
