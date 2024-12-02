@@ -2,129 +2,126 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const nodemailer = require('nodemailer');
-require('dotenv').config();  
+require('dotenv').config();
 const USER_TYPES = {
   ADMIN: 'admin',
   CLIENT: 'cliente',
 };
 
-// Configuración del transportador de Nodemailer con las credenciales de HostGator
+// Configuración de Nodemailer
 const transporter = nodemailer.createTransport({
-  host: 'smtp.titan.email',  // Servidor alternativo de HostGator
-  port: 465,  // O 587 si prefieres STARTTLS
-  secure: true,  // Usar SSL
+  host: 'smtp.titan.email',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-// Función para enviar el correo de verificación
 const sendVerificationEmail = async (email, verificationToken) => {
   const url = `https://backend-reclutamiento.onrender.com/api/auth/verify-email?token=${verificationToken}`;
-  // Enviar el correo
   await transporter.sendMail({
-    from: process.env.EMAIL_USER, // Usar la variable de entorno para el correo
-    to: email, 
-    subject: 'Verifica tu correo', 
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Verifica tu correo',
     html: `<p>Haz clic en el siguiente enlace para verificar tu cuenta: <a href="${url}">Verificar correo</a></p>`,
   });
 };
+
 const validatePassword = (password) => {
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   return regex.test(password);
 };
 
-// Registrar usuario
+// Registro de usuario
 const registerUser = async (req, res) => {
   const { name, email, password, fechaNacimiento, telefono } = req.body;
 
   if (!name || !email || !password || !fechaNacimiento || !telefono) {
-    return res.status(400).json({ status: 'error', message: "Datos inválidos" });
+    return res.status(400).json({ status: 'error', message: 'Datos inválidos' });
   }
 
   if (!validatePassword(password)) {
     return res.status(400).json({
       status: 'error',
-      message: "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula, un número y un carácter especial."
+      message: 'La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula, un número y un carácter especial.',
     });
   }
 
   const connection = await db.promise().getConnection();
   try {
+    // Verificar si el correo ya está registrado
     const [existingUser] = await connection.execute('SELECT * FROM usuario WHERE us_correo = ?', [email]);
     if (existingUser.length > 0) {
-      return res.status(400).json({ status: 'error', message: 'El correo electrónico ya está registrado, intente con otro' });
+      return res.status(400).json({ status: 'error', message: 'El correo electrónico ya está registrado, intente con otro.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Iniciar transacción
     await connection.beginTransaction();
-    try {
-      const [userResult] = await connection.execute(
-        'INSERT INTO usuario (us_nombre, us_correo, us_contrasena, rol) VALUES (?, ?, ?, ?)',
-        [name, email, hashedPassword, USER_TYPES.CLIENT]
-      );
 
-      const userId = userResult.insertId;
+    const [userResult] = await connection.execute(
+      'INSERT INTO usuario (us_nombre, us_correo, us_contrasena, rol) VALUES (?, ?, ?, ?)',
+      [name, email, hashedPassword, USER_TYPES.CLIENT]
+    );
 
-      await connection.execute(
-        'INSERT INTO candidatos (fechaNacimiento, telefono, id_usuario) VALUES (?, ?, ?)',
-        [fechaNacimiento, telefono, userId]
-      );
+    const userId = userResult.insertId;
 
-      const verificationToken = jwt.sign({ id_usuario: userId , role: user.rol }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    await connection.execute(
+      'INSERT INTO candidatos (fechaNacimiento, telefono, id_usuario) VALUES (?, ?, ?)',
+      [fechaNacimiento, telefono, userId]
+    );
 
-      // Actualizar el campo 'us_codigo_verificacion' con el token de verificación
-      await connection.execute('UPDATE usuario SET us_codigo_verificacion = ? WHERE id_usuario = ?', [verificationToken, userId]);
+    const verificationToken = jwt.sign({ id_usuario: userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-      await sendVerificationEmail(email, verificationToken);
+    await connection.execute('UPDATE usuario SET us_codigo_verificacion = ? WHERE id_usuario = ?', [verificationToken, userId]);
 
-      await connection.commit();
-      res.status(201).json({ status: 'success', message: "Usuario registrado correctamente. Revisa tu correo para verificar tu cuenta." });
-    } catch (error) {
-      await connection.rollback();
-      console.error("Error durante la transacción:", error);
-      res.status(500).json({ status: 'error', message: "Error en la transacción", details: error.message });
-    }
+    await sendVerificationEmail(email, verificationToken);
+
+    await connection.commit();
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Usuario registrado correctamente. Revisa tu correo para verificar tu cuenta.',
+    });
   } catch (error) {
-    console.error("Error al verificar correo:", error);
-    res.status(500).json({ status: 'error', message: "Error al verificar el correo", details: error.message });
+    await connection.rollback();
+    console.error('Error durante la transacción:', error);
+    res.status(500).json({ status: 'error', message: 'Error en el registro', details: error.message });
   } finally {
-    if (connection) connection.release();
+    connection.release();
   }
 };
 
-// Verificar el correo
+// Verificar correo electrónico
 const verifyEmail = async (req, res) => {
   const { token } = req.query;
 
   if (!token) {
-    return res.status(400).json({ error: "Token no proporcionado" });
+    return res.status(400).json({ error: 'Token no proporcionado' });
   }
 
   const connection = await db.promise().getConnection();
   try {
-    // Verificar el token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Decodificar y verificar el token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.id_usuario;
 
-    // Buscar el usuario con el id decodificado
     const [user] = await connection.execute('SELECT * FROM usuario WHERE id_usuario = ?', [userId]);
 
     if (user.length === 0) {
-      return res.status(400).json({ error: "Usuario no encontrado" });
+      return res.status(400).json({ error: 'Usuario no encontrado' });
     }
 
-    // Actualizar el estado de verificación del usuario
     await connection.execute('UPDATE usuario SET us_verificado = 1 WHERE id_usuario = ?', [userId]);
 
-    res.status(200).json({ message: "Correo verificado correctamente. Ahora puedes iniciar sesión." });
+    res.status(200).json({ message: 'Correo verificado correctamente. Ahora puedes iniciar sesión.' });
   } catch (error) {
-    console.error("Error al verificar correo:", error);
-    res.status(500).json({ error: "Error al verificar el correo", details: error.message });
+    console.error('Error al verificar correo:', error);
+    res.status(500).json({ error: 'Error al verificar el correo', details: error.message });
   } finally {
-    if (connection) connection.release();
+    connection.release();
   }
 };
 
@@ -132,34 +129,35 @@ const verifyEmail = async (req, res) => {
 const loginUser = async (req, res) => {
   const { correo, password } = req.body;
 
-  db.query('SELECT * FROM usuario WHERE us_correo = ?', [correo], async (error, results) => {
-    if (error) {
-      console.error("Error al buscar usuario:", error);
-      return res.status(500).json({ error: "Error al buscar usuario" });
-    }
+  const connection = await db.promise().getConnection();
+  try {
+    const [results] = await connection.execute('SELECT * FROM usuario WHERE us_correo = ?', [correo]);
 
     if (results.length === 0) {
-      console.log("No se encontraron usuarios con este correo");
-      return res.status(401).json({ error: "Credenciales incorrectas" });
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 
     const user = results[0];
 
-    // Verificar si el correo está verificado
     if (!user.us_verificado) {
-      return res.status(401).json({ error: "Por favor verifica tu correo electrónico antes de iniciar sesión." });
+      return res.status(401).json({ error: 'Por favor verifica tu correo electrónico antes de iniciar sesión.' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.us_contrasena);
 
     if (!isPasswordValid) {
-      console.log("Contraseña no válida");
-      return res.status(401).json({ error: "Credenciales incorrectas" });
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 
     const token = jwt.sign({ id_usuario: user.id_usuario, role: user.rol }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ message: "Inicio de sesión exitoso", token });
-  });
+
+    res.json({ message: 'Inicio de sesión exitoso', token });
+  } catch (error) {
+    console.error('Error al iniciar sesión:', error);
+    res.status(500).json({ error: 'Error al iniciar sesión', details: error.message });
+  } finally {
+    connection.release();
+  }
 };
 
 module.exports = { registerUser, loginUser, verifyEmail };
