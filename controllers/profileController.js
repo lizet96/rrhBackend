@@ -35,6 +35,7 @@ const updateProfile = async (req, res) => {
 
 const updateProfileInfo = async (req, res) => {
   const { id_usuario, us_nombre, us_apellido, us_correo, telefono } = req.body;
+  
 
   // Valida si los parámetros esenciales existen
   if (!id_usuario || !us_nombre  || !us_correo) {
