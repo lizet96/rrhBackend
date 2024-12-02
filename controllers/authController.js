@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
 
 // Función para enviar el correo de verificación
 const sendVerificationEmail = async (email, verificationToken) => {
-  const url = `https://backend-reclutamiento.onrender.com/api/auth/verify-email?token=${verificationToken}`;
+  const url = `https://rrhbackend.onrender.com/api/auth/verify-email?token=${verificationToken}`;
   // Enviar el correo
   await transporter.sendMail({
     from: process.env.EMAIL_USER, // Usar la variable de entorno para el correo
