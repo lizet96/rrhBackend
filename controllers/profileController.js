@@ -81,7 +81,7 @@ const getUserProfile = async (req, res) => {
     
     // Extrae los datos del usuario y la imagen
     const user = rows[0];
-    const profileImageUrl = user.us_foto ? `http://localhost:5000/uploads/${path.basename(user.us_foto)}` : null;
+    const profileImageUrl = user.us_foto ? `https://rrhbackend.onrender.com/uploads/${path.basename(user.us_foto)}` : null;
 
     // Devolvemos la información del perfil junto con el teléfono del candidato
     res.status(200).json({
