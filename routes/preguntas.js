@@ -13,10 +13,22 @@ router.get('/preguntas', (req, res) => {
 
   // Consulta para obtener las preguntas y sus respuestas asociadas al id_formulario
   const query = `
-    SELECT p.id_pregunta, p.texto_pregunta, p.tipo_respuesta, r.id_respuesta, r.opcion_respuesta
-    FROM preguntas p
-    LEFT JOIN respuestas r ON p.id_pregunta = r.id_pregunta
-    WHERE p.id_formulario = ?
+    SELECT 
+    p.id_pregunta, 
+    p.texto_pregunta, 
+    r.id_respuesta, 
+    r.opcion_respuesta 
+FROM 
+    preguntas p
+LEFT JOIN 
+    respuestas r 
+ON 
+    p.id_pregunta = r.id_pregunta
+WHERE 
+    p.id_formulario = 1
+ORDER BY 
+    p.id_pregunta, r.id_respuesta;
+
   `;
 
   db.query(query, [id_formulario], (err, results) => {
