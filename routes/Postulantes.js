@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const postulanteController = require('../controllers/postulanteController');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const  { getVacantesEmpresa, getPostulantes } = require('../controllers/postulanteController');
 
-router.get('/api/VacanteEmpresa', postulanteController.getVacantesEmpresa);
-router.get('/api/Postulantes', postulanteController.getPostulantes);
+router.get('/api/VacanteEmpresa', verifyToken,  getVacantesEmpresa);
+router.get('/api/Postulantes', verifyToken, getPostulantes);
 
 module.exports = router;

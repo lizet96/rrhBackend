@@ -11,7 +11,7 @@ const formularios = require("./routes/formularios");
 const preguntas = require("./routes/preguntas");
 const respuestasRoutes = require('./routes/respuestas');
 const resultadosRoutes = require('./routes/resultadosRoutes');
-
+const postulante = requiere ('./routes/Postulantes.js')
 const path = require('path');
 
 const app = express();
@@ -23,9 +23,9 @@ const db = require('./db'); // Aquí importamos la conexión a la base de datos
 // Middleware
 app.use(
   cors({
-    origin:'*', // Permite conexiones desde el frontend desplegado
+    origin: process.env.CLIENT_URL || '*', // Permite conexiones desde el frontend desplegado
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Agrega más métodos si son necesarios
-    allowedHeaders: ['Content-Type', 'Authorization'], // Asegúrate de incluir `Authorization` si usas JWT
+    allowedHeaders: ['Content-Type', 'Authorization'], // Asegúrate de incluir Authorization si usas JWT
   })
 );
 
@@ -44,8 +44,6 @@ db.getConnection((err, connection) => {
 // Rutas
 app.get('/api/empresas', (req, res) => {
   const query = 'SELECT id_empresa, emp_nombre FROM empresas';
-  console.log("Iniciando la api de empresas");
-  console.log(query);
   db.query(query, (err, result) => {
     if (err) {
       console.error('Error al obtener las empresas:', err);
@@ -57,8 +55,6 @@ app.get('/api/empresas', (req, res) => {
 
 app.get('/api/categorias', (req, res) => {
   const query = 'SELECT id_categoria, cat_nombre FROM categoriavacante';
-  console.log("Iniciando la api de categorias");
-  console.log(query);
   db.query(query, (err, result) => {
     if (err) {
       console.error('Error al obtener las categorías:', err);
@@ -71,8 +67,6 @@ app.get('/api/categorias', (req, res) => {
 // Controlador para obtener todas las vacantes
 app.get('/api/vacantes', (req, res) => {
   const query = 'SELECT id_vacante, vac_nombre, vac_descripcion, fecha_inicio, fecha_fin, sueldoMensual FROM vacante'; // Modifica según las columnas de tu tabla vacante
-  console.log("Iniciando la api de vacantes");
-  console.log(query);
   db.query(query, (err, result) => {
     if (err) {
       console.error('Error al obtener las vacantes:', err);
@@ -84,8 +78,6 @@ app.get('/api/vacantes', (req, res) => {
 
 app.get('/api/habilidades', (req, res) => {
   const query = 'SELECT id_habilidad, hab_nombre FROM habilidad';
-  console.log("Iniciando la api de habilidades");
-  console.log(query);
   db.query(query, (err, result) => {
     if (err) {
       console.error('Error al obtener las habilidades:', err);
@@ -105,7 +97,7 @@ app.use("/api", formularios); // Agrega las rutas de formularios
 app.use("/api", preguntas); // Agrega las rutas de formularios
 app.use('/api', respuestasRoutes);
 app.use(resultadosRoutes);
-
+app.use('/api', postulante)
 // Rutas estáticas
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

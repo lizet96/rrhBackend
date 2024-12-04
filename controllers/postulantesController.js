@@ -1,7 +1,7 @@
 const db = require("../db");
 
 // Obtener todas las vacantes (sin filtrar por id_empresa)
-exports.getVacantesEmpresa = (req, res) => {
+const getVacantesEmpresa = (req, res) => {
   const query = `
     SELECT id_vacante, vac_nombre, vac_descripcion, fecha_inicio, fecha_fin, sueldoMensual, id_categoria
     FROM vacante;
@@ -16,7 +16,7 @@ exports.getVacantesEmpresa = (req, res) => {
 };
 
 // Obtener postulantes por id_vacante con información de candidato y usuario
-exports.getPostulantes = (req, res) => {
+const getPostulantes = (req, res) => {
   const id_vacante = req.query.id_vacante;
 
   const query = `
@@ -40,3 +40,4 @@ exports.getPostulantes = (req, res) => {
     res.json(resultados);
   });
 };
+module.exports = { getPostulantes, getVacantesEmpresa };
