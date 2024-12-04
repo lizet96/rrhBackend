@@ -11,7 +11,6 @@ const formularios = require("./routes/formularios");
 const preguntas = require("./routes/preguntas");
 const respuestasRoutes = require('./routes/respuestas');
 const resultadosRoutes = require('./routes/resultadosRoutes');
-const postulantes = require('./routes/Postulantes');
 const path = require('path');
 
 const app = express();
@@ -87,6 +86,45 @@ app.get('/api/habilidades', (req, res) => {
   });
 });
 
+app.get('/api/VacanteEmpresa', (req, res) => {
+  const query = `
+    SELECT id_vacante, vac_nombre, vac_descripcion, fecha_inicio, fecha_fin, sueldoMensual, id_categoria
+    FROM vacante;
+  `;
+  db.query(query, (error, resultados) => {
+    if (error) {
+      console.error("Error al obtener las vacantes:", error);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+    }
+    res.json(resultados);
+  });
+});
+
+app.get('/api/Postulantes', (req, res) => {
+  const id_vacante = req.query.id_vacante;
+
+  const query = `
+    SELECT 
+      c.id_candidato, 
+      c.telefono, 
+      u.us_nombre, 
+      u.us_apellido, 
+      u.us_correo
+    FROM candidatovacante cv
+    JOIN candidatos c ON c.id_candidato = cv.id_candidato
+    JOIN usuario u ON u.id_usuario = c.id_usuario
+    WHERE cv.id_vacante = ? AND cv.totalcompleto >= 80;
+  `;
+  
+  db.query(query, [id_vacante], (error, resultados) => {
+    if (error) {
+      console.error("Error al obtener los postulantes:", error);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+    }
+    res.json(resultados);
+  });
+});
+
 // Montar las rutas
 app.use('/api/auth', authRoutes);
 app.use('/api', protectedRoutes);
@@ -97,7 +135,7 @@ app.use("/api", formularios); // Agrega las rutas de formularios
 app.use("/api", preguntas); // Agrega las rutas de formularios
 app.use('/api', respuestasRoutes);
 app.use(resultadosRoutes);
-app.use('/api', postulantes);// Rutas estáticas
+// Rutas estáticas
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Inicia el servidor
