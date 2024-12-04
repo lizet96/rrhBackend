@@ -8,6 +8,7 @@ const db = require('../db');
 // Ruta para guardar las respuestas
 router.post('/guardar_respuestas', (req, res) => {
   const { id_formulario, respuestas, id_usuario } = req.body;
+  console.log("ID del formulario:", id_formulario);
 
   // Validar que las respuestas no estén vacías
   if (!id_formulario || !Array.isArray(respuestas) || respuestas.length === 0 || !id_usuario) {
@@ -17,7 +18,9 @@ router.post('/guardar_respuestas', (req, res) => {
   // Procesar cada respuesta
   const promises = respuestas.map((respuesta) => {
     const { id_pregunta, id_respuesta } = respuesta;
-
+    console.log("IDs de preguntas:", idsPreguntas);
+    console.log("ID del formulario:", id_formulario);
+    
     // Obtener la respuesta correcta desde la base de datos
     const queryRespuestaCorrecta = `
       SELECT res_valor, res_estatus 
@@ -60,14 +63,20 @@ router.post('/guardar_respuestas', (req, res) => {
   // Procesar todas las respuestas en paralelo
   Promise.all(promises)
     .then(() => {
+      if (!idsPreguntas || idsPreguntas.length === 0) {
+        return res.status(400).json({ error: 'No se enviaron preguntas para validar' });
+      }      
+      console.log("IDs de preguntas recibidos:", idsPreguntas);
+console.log("ID del formulario:", id_formulario);
+const idsPreguntas = respuestas.map((r) => r.id_pregunta);
+console.log("IDs de preguntas a consultar:", idsPreguntas);
+
       // Obtener todas las preguntas del formulario
       const queryPreguntasFormulario = `
         SELECT DISTINCT id_pregunta 
         FROM respuestas 
         WHERE id_pregunta IN (?) AND id_formulario = ?
       `;
-
-      const idsPreguntas = respuestas.map((r) => r.id_pregunta);
 
       db.query(queryPreguntasFormulario, [idsPreguntas, id_formulario], (err, preguntasFormulario) => {
         if (err) {
