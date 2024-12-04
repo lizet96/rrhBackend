@@ -1,51 +1,42 @@
-const db = require("../db");  // Asegúrate de que la conexión a la base de datos está configurada correctamente
+const db = require("../db");
 
-// Obtener vacantes por id_empresa
+// Obtener todas las vacantes (sin filtrar por id_empresa)
 exports.getVacantesEmpresa = (req, res) => {
-
   const query = `
-    SELECT id_vacante, vac_nombre, vac_descripcion, fecha_inicio, fecha_fin, sueldoMensual, id_empresa, id_categoria
+    SELECT id_vacante, vac_nombre, vac_descripcion, fecha_inicio, fecha_fin, sueldoMensual, id_categoria
     FROM vacante;
   `;
-  
-  // Realiza la consulta en la base de datos
-  db.query(query, [id_empresa], (error, resultados) => {
+  db.query(query, (error, resultados) => {
     if (error) {
-      console.error("Error al obtener los resultados:", error);
+      console.error("Error al obtener las vacantes:", error);
       return res.status(500).json({ error: 'Error interno del servidor' });
     }
-
-    if (resultados.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron resultados para vacantes' });
-    }
-
-    // Devuelve los resultados como JSON
     res.json(resultados);
   });
 };
 
-// Obtener postulantes con totalcompleto >= 80 por id_vacante
+// Obtener postulantes por id_vacante con información de candidato y usuario
 exports.getPostulantes = (req, res) => {
-  const id_vacante = req.query.id_vacante;  // Obtenemos el id de la vacante desde los parámetros de consulta
+  const id_vacante = req.query.id_vacante;
 
   const query = `
-    SELECT id_candidato, id_vacante, totalcompleto
-    FROM candidatovacante
-    WHERE id_vacante = ? AND totalcompleto >= 80;
+    SELECT 
+      c.id_candidato, 
+      c.telefono, 
+      u.us_nombre, 
+      u.us_apellido, 
+      u.us_correo
+    FROM candidatovacante cv
+    JOIN candidatos c ON c.id_candidato = cv.id_candidato
+    JOIN usuario u ON u.id_usuario = c.id_usuario
+    WHERE cv.id_vacante = ? AND cv.totalcompleto >= 80;
   `;
   
-  // Realiza la consulta en la base de datos
   db.query(query, [id_vacante], (error, resultados) => {
     if (error) {
-      console.error("Error al obtener los resultados:", error);
+      console.error("Error al obtener los postulantes:", error);
       return res.status(500).json({ error: 'Error interno del servidor' });
     }
-
-    if (resultados.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron resultados para postulantes' });
-    }
-
-    // Devuelve los resultados como JSON
     res.json(resultados);
   });
 };
