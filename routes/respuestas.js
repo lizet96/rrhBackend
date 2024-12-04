@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 
@@ -22,11 +21,11 @@ router.post('/guardar_respuestas', (req, res) => {
     console.log("ID del formulario:", id_formulario);
     
     // Obtener la respuesta correcta desde la base de datos
-    const queryRespuestaCorrecta = `
-      SELECT res_valor, res_estatus 
+    const queryRespuestaCorrecta = 
+    `SELECT res_valor, res_estatus 
       FROM respuestas 
-      WHERE id_pregunta = ? AND id_respuesta = ?
-    `;
+      WHERE id_pregunta = ? AND id_respuesta = ?`
+    ;
 
     return new Promise((resolve, reject) => {
       db.query(queryRespuestaCorrecta, [id_pregunta, id_respuesta], (err, result) => {
@@ -44,10 +43,10 @@ router.post('/guardar_respuestas', (req, res) => {
         const result_valor = res_valor;
 
         // Insertar en la tabla 'resultados'
-        const queryInsertResultado = `
-          INSERT INTO resultados (id_usuario, id_pregunta, estatus_pregunta, result_valor)
-          VALUES (?, ?, ?, ?)
-        `;
+        const queryInsertResultado = 
+          `INSERT INTO resultados (id_usuario, id_pregunta, estatus_pregunta, result_valor)
+          VALUES (?, ?, ?, ?)`
+        ;
 
         db.query(queryInsertResultado, [id_usuario, id_pregunta, estatus_pregunta, result_valor], (err) => {
           if (err) {
@@ -72,11 +71,11 @@ const idsPreguntas = respuestas.map((r) => r.id_pregunta);
 console.log("IDs de preguntas a consultar:", idsPreguntas);
 
       // Obtener todas las preguntas del formulario
-      const queryPreguntasFormulario = `
-        SELECT DISTINCT id_pregunta 
+      const queryPreguntasFormulario = 
+        `SELECT DISTINCT id_pregunta 
         FROM respuestas 
-        WHERE id_pregunta IN (?) AND id_formulario = ?
-      `;
+        WHERE id_pregunta IN (?) AND id_formulario = ?`
+      ;
 
       db.query(queryPreguntasFormulario, [idsPreguntas, id_formulario], (err, preguntasFormulario) => {
         if (err) {
@@ -87,11 +86,11 @@ console.log("IDs de preguntas a consultar:", idsPreguntas);
         // Validar si todas las preguntas del formulario fueron respondidas
         if (preguntasFormulario.length === idsPreguntas.length) {
           // Hacer un único UPDATE en 'candidatohabilidad'
-          const queryUpdateCandidatoHabilidad = `
-            UPDATE candidatohabilidad 
+          const queryUpdateCandidatoHabilidad = 
+           ` UPDATE candidatohabilidad 
             SET estatus = 1 -- 1 indica "completado"
-            WHERE id_formulario = ?
-          `;
+            WHERE id_formulario = ?`
+          ;
 
           db.query(queryUpdateCandidatoHabilidad, [id_formulario], (err) => {
             if (err) {
