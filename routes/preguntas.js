@@ -11,13 +11,24 @@ router.get('/preguntas', (req, res) => {
     return res.status(400).json({ error: 'El id_formulario es necesario' });
   }
 
-  console.log("Recibido id_formulario:", id_formulario); // Log para verificar qué valor llega
-
+  // Consulta para obtener las preguntas y sus respuestas asociadas al id_formulario
   const query = `
-    SELECT p.id_pregunta, p.texto_pregunta, r.id_respuesta, r.opcion_respuesta
-    FROM preguntas p
-    LEFT JOIN respuestas r ON p.id_pregunta = r.id_pregunta
-    WHERE p.id_formulario = ?
+    SELECT 
+    p.id_pregunta, 
+    p.texto_pregunta, 
+    r.id_respuesta, 
+    r.opcion_respuesta 
+FROM 
+    preguntas p
+LEFT JOIN 
+    respuestas r 
+ON 
+    p.id_pregunta = r.id_pregunta
+WHERE 
+    p.id_formulario = 1
+ORDER BY 
+    p.id_pregunta, r.id_respuesta;
+
   `;
 
   db.query(query, [id_formulario], (err, results) => {
@@ -26,18 +37,23 @@ router.get('/preguntas', (req, res) => {
       return res.status(500).json({ error: 'Error al obtener preguntas' });
     }
 
+    // Agrupar las respuestas por pregunta
     const preguntas = results.reduce((acc, row) => {
+      // Encontrar la pregunta en el acumulador
       let pregunta = acc.find(p => p.id_pregunta === row.id_pregunta);
 
+      // Si la pregunta no está en el acumulador, agregarla
       if (!pregunta) {
         pregunta = {
           id_pregunta: row.id_pregunta,
           texto_pregunta: row.texto_pregunta,
+          tipo_respuesta: row.tipo_respuesta,
           respuestas: [],
         };
         acc.push(pregunta);
       }
 
+      // Si hay respuestas, agregarlas a la pregunta correspondiente
       if (row.id_respuesta) {
         pregunta.respuestas.push({
           id_respuesta: row.id_respuesta,
@@ -48,7 +64,7 @@ router.get('/preguntas', (req, res) => {
       return acc;
     }, []);
 
-    console.log("Preguntas generadas:", JSON.stringify(preguntas, null, 2)); // Log para verificar resultados
+    // Enviar las preguntas con sus respuestas como respuesta
     res.json(preguntas);
   });
 });
