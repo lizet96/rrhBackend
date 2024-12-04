@@ -8,15 +8,9 @@ router.get('/preguntas', (req, res) => {
 
   // Verificar que id_formulario esté presente
   if (!id_formulario) {
-    return res.status(400).json({ error: 'Falta id_formulario' });
+    return res.status(400).json({ error: 'El id_formulario es necesario' });
   }
-  if (!Array.isArray(respuestas) || respuestas.length === 0) {
-    return res.status(400).json({ error: 'Las respuestas están vacías o son inválidas' });
-  }
-  if (!id_usuario) {
-    return res.status(400).json({ error: 'Falta id_usuario' });
-  }
-  
+
   console.log("Recibido id_formulario:", id_formulario); // Log para verificar qué valor llega
 
   const query = `
@@ -28,10 +22,9 @@ router.get('/preguntas', (req, res) => {
 
   db.query(query, [id_formulario], (err, results) => {
     if (err) {
-      console.error("Error al obtener preguntas del formulario:", err.message, err.stack);
-      return res.status(500).json({ error: 'Error al ejecutar la consulta SQL para preguntas del formulario' });
+      console.error('Error al obtener preguntas:', err);
+      return res.status(500).json({ error: 'Error al obtener preguntas' });
     }
-    
 
     const preguntas = results.reduce((acc, row) => {
       let pregunta = acc.find(p => p.id_pregunta === row.id_pregunta);
