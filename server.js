@@ -11,7 +11,7 @@ const formularios = require("./routes/formularios");
 const preguntas = require("./routes/preguntas");
 const respuestasRoutes = require('./routes/respuestas');
 const resultadosRoutes = require('./routes/resultadosRoutes');
-const postulante = require ('./routes/Postulantes.js')
+const postulantes = require('./routes/Postulantes');
 const path = require('path');
 
 const app = express();
@@ -97,8 +97,7 @@ app.use("/api", formularios); // Agrega las rutas de formularios
 app.use("/api", preguntas); // Agrega las rutas de formularios
 app.use('/api', respuestasRoutes);
 app.use(resultadosRoutes);
-app.use('/api', postulante)
-// Rutas estáticas
+app.use('/api', postulantes);// Rutas estáticas
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Inicia el servidor
