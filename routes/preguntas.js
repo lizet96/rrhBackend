@@ -14,7 +14,7 @@ router.get('/preguntas', (req, res) => {
   console.log("Recibido id_formulario:", id_formulario); // Log para verificar qué valor llega
 
   const query = `
-    SELECT p.id_pregunta, p.texto_pregunta, r.id_respuesta, r.opcion_respuestaA
+    SELECT p.id_pregunta, p.texto_pregunta, r.id_respuesta, r.opcion_respuesta
     FROM preguntas p
     LEFT JOIN respuestas r ON p.id_pregunta = r.id_pregunta
     WHERE p.id_formulario = ?
