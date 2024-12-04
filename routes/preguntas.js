@@ -8,9 +8,15 @@ router.get('/preguntas', (req, res) => {
 
   // Verificar que id_formulario esté presente
   if (!id_formulario) {
-    return res.status(400).json({ error: 'El id_formulario es necesario' });
+    return res.status(400).json({ error: 'Falta id_formulario' });
   }
-
+  if (!Array.isArray(respuestas) || respuestas.length === 0) {
+    return res.status(400).json({ error: 'Las respuestas están vacías o son inválidas' });
+  }
+  if (!id_usuario) {
+    return res.status(400).json({ error: 'Falta id_usuario' });
+  }
+  
   console.log("Recibido id_formulario:", id_formulario); // Log para verificar qué valor llega
 
   const query = `
