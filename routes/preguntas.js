@@ -1,107 +1,56 @@
-
 const express = require('express');
 const router = express.Router();
+const db = require('../db'); // Conexión a la base de datos
 
-// Importa la conexión de la base de datos desde db.js
-const db = require('../db');
+// Ruta para obtener preguntas y sus respuestas filtradas por id_formulario
+router.get('/preguntas', (req, res) => {
+  const { id_formulario } = req.query; // Obtener el id_formulario desde los parámetros de la consulta
 
-// Ruta para guardar las respuestas
-router.post('/guardar_respuestas', (req, res) => {
-  const { id_formulario, respuestas, id_usuario } = req.body;
-
-  // Validar que las respuestas no estén vacías
-  if (!id_formulario || !Array.isArray(respuestas) || respuestas.length === 0 || !id_usuario) {
-    return res.status(400).json({ error: 'Datos incompletos' });
+  // Verificar que id_formulario esté presente
+  if (!id_formulario) {
+    return res.status(400).json({ error: 'El id_formulario es necesario' });
   }
 
-  // Procesar cada respuesta
-  const promises = respuestas.map((respuesta) => {
-    const { id_pregunta, id_respuesta } = respuesta;
+  console.log("Recibido id_formulario:", id_formulario); // Log para verificar qué valor llega
 
-    // Obtener la respuesta correcta desde la base de datos
-    const queryRespuestaCorrecta = `
-      SELECT res_valor, res_estatus 
-      FROM respuestas 
-      WHERE id_pregunta = ? AND id_respuesta = ?
-    `;
+  const query = `
+    SELECT p.id_pregunta, p.texto_pregunta, r.id_respuesta, r.opcion_respuestaA
+    FROM preguntas p
+    LEFT JOIN respuestas r ON p.id_pregunta = r.id_pregunta
+    WHERE p.id_formulario = ?
+  `;
 
-    return new Promise((resolve, reject) => {
-      db.query(queryRespuestaCorrecta, [id_pregunta, id_respuesta], (err, result) => {
-        if (err) {
-          console.error("Error al obtener la respuesta correcta:", err);
-          return reject('Error al obtener las respuestas correctas');
-        }
+  db.query(query, [id_formulario], (err, results) => {
+    if (err) {
+      console.error('Error al obtener preguntas:', err);
+      return res.status(500).json({ error: 'Error al obtener preguntas' });
+    }
 
-        if (result.length === 0) {
-          return reject(`Respuesta no encontrada en la base de datos para la pregunta ${id_pregunta}`);
-        }
+    const preguntas = results.reduce((acc, row) => {
+      let pregunta = acc.find(p => p.id_pregunta === row.id_pregunta);
 
-        const { res_valor, res_estatus } = result[0];
-        const estatus_pregunta = res_estatus; // Aquí res_estatus es un número, usamos directamente su valor.
-        const result_valor = res_valor;
+      if (!pregunta) {
+        pregunta = {
+          id_pregunta: row.id_pregunta,
+          texto_pregunta: row.texto_pregunta,
+          respuestas: [],
+        };
+        acc.push(pregunta);
+      }
 
-        // Insertar en la tabla 'resultados'
-        const queryInsertResultado = `
-          INSERT INTO resultados (id_usuario, id_pregunta, estatus_pregunta, result_valor)
-          VALUES (?, ?, ?, ?)
-        `;
-
-        db.query(queryInsertResultado, [id_usuario, id_pregunta, estatus_pregunta, result_valor], (err) => {
-          if (err) {
-            console.error("Error al guardar el resultado:", err);
-            return reject('Error al guardar el resultado');
-          }
-          resolve(true);
+      if (row.id_respuesta) {
+        pregunta.respuestas.push({
+          id_respuesta: row.id_respuesta,
+          opcion_respuesta: row.opcion_respuesta,
         });
-      });
-    });
+      }
+
+      return acc;
+    }, []);
+
+    console.log("Preguntas generadas:", JSON.stringify(preguntas, null, 2)); // Log para verificar resultados
+    res.json(preguntas);
   });
-
-  // Procesar todas las respuestas en paralelo
-  Promise.all(promises)
-    .then(() => {
-      // Obtener todas las preguntas del formulario
-      const queryPreguntasFormulario = `
-        SELECT DISTINCT id_pregunta 
-        FROM respuestas 
-        WHERE id_pregunta IN (?) AND id_formulario = ?
-      `;
-
-      const idsPreguntas = respuestas.map((r) => r.id_pregunta);
-
-      db.query(queryPreguntasFormulario, [idsPreguntas, id_formulario], (err, preguntasFormulario) => {
-        if (err) {
-          console.error("Error al obtener preguntas del formulario:", err);
-          return res.status(500).json({ error: 'Error al obtener preguntas del formulario' });
-        }
-
-        // Validar si todas las preguntas del formulario fueron respondidas
-        if (preguntasFormulario.length === idsPreguntas.length) {
-          // Hacer un único UPDATE en 'candidatohabilidad'
-          const queryUpdateCandidatoHabilidad = `
-            UPDATE candidatohabilidad 
-            SET estatus = 1 -- 1 indica "completado"
-            WHERE id_formulario = ?
-          `;
-
-          db.query(queryUpdateCandidatoHabilidad, [id_formulario], (err) => {
-            if (err) {
-              console.error("Error al actualizar el estatus en candidatohabilidad:", err);
-              return res.status(500).json({ error: 'Error al actualizar el estatus' });
-            }
-
-            return res.json({ success: 'Formulario completado y resultados guardados exitosamente' });
-          });
-        } else {
-          // Respuesta para cuando no se han completado todas las preguntas
-          res.json({ success: 'Respuestas guardadas, pero el formulario aún no se ha completado' });
-        }
-      });
-    })
-    .catch((error) => {
-      console.error("Error al procesar las respuestas:", error);
-      res.status(500).json({ error });
-    });
 });
 
 module.exports = router;
