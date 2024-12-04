@@ -11,7 +11,7 @@ const formularios = require("./routes/formularios");
 const preguntas = require("./routes/preguntas");
 const respuestasRoutes = require('./routes/respuestas');
 const resultadosRoutes = require('./routes/resultadosRoutes');
-const postulante = requiere ('./routes/Postulantes.js')
+const postulante = require ('./routes/Postulantes.js')
 const path = require('path');
 
 const app = express();
