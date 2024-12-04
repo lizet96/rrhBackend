@@ -104,12 +104,13 @@ app.get('/api/Postulantes', (req, res) => {
   const id_vacante = req.query.id_vacante;
 
   const query = `
-    SELECT 
+   SELECT 
       c.id_candidato, 
       c.telefono, 
       u.us_nombre, 
       u.us_apellido, 
-      u.us_correo
+      u.us_correo,
+      cv.totalcompleto
     FROM candidatovacante cv
     JOIN candidatos c ON c.id_candidato = cv.id_candidato
     JOIN usuario u ON u.id_usuario = c.id_usuario
